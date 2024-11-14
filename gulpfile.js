@@ -37,7 +37,12 @@ function serveUpdates() {
     server: {
       baseDir: "./dist/",
     },
+    middleware: function (req, res, next) {
+      res.setHeader("Service-Worker-Allowed", "/");
+      next();
+    },
   });
+
   watch(stylesPath, compileStyles);
   watch(assetsPath, copyAssets);
   watch(markupPath, copyHtml).on("change", browserSync.reload);
