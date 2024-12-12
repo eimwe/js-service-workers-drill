@@ -5,50 +5,86 @@ const fetchIntercept = new FetchIntercept();
 fetchIntercept.setup(async (url, options) => {
   console.log("Intercepted global fetch:", { url, options });
 
-  // Example: Add a global header to every request
-  options = options || {};
-  options.headers = {
-    ...options.headers,
-    "X-Global-Intercept": "Active",
-  };
-
-  // Example: Modify or mock specific URLs
-  if (url.includes("jsonplaceholder")) {
-    console.log("JSONPlaceholder request detected");
-    // You could add special handling here
+  if (url.includes("/users")) {
+    return new Response(
+      JSON.stringify([
+        {
+          id: 1,
+          name: "Mocked User",
+          username: "mockuser",
+          email: "mock@example.com",
+        },
+      ]),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 
-  // Return modified request
-  return [url, options];
+  if (url.includes("/posts")) {
+    return new Response(
+      JSON.stringify([
+        {
+          id: 1,
+          title: "Mocked Post",
+          body: "This is a mocked post content",
+        },
+      ]),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
 
-  /*return new Response(
-    JSON.stringify([
-      { id: 1, name: "Intercepted User", username: "interceptor" },
-    ]),
+  if (url.includes("/redirect")) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: "https://example.com/redirected",
+      },
+    });
+  }
+
+  if (url.includes("/text-message")) {
+    return new Response("This is a plain text message", {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+
+  // Generic mock for any other URL
+  return new Response(
+    JSON.stringify({
+      message: "Generic mock response",
+      url: url,
+    }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }
-  );*/
+  );
 });
 
 async function testFetches() {
   try {
     const users = await fetch("https://jsonplaceholder.typicode.com/users");
     const posts = await fetch("https://jsonplaceholder.typicode.com/posts");
-    const todos = await fetch("https://jsonplaceholder.typicode.com/todos");
+    const textMessage = await fetch("/api/text-message");
+    const redirect = await fetch("/api/redirect");
 
-    console.log("Fetch responses:", {
+    console.log("Mocked Fetch Responses:", {
       users: await users.json(),
       posts: await posts.json(),
-      todos: await todos.json(),
+      textMessage: await textMessage.text(),
     });
   } catch (error) {
     console.error("Fetch error:", error);
   }
 }
 
-testFetches();
-
-// Optional: Restore original fetch
+// Reset to original fetch
 // fetchIntercept.restore();
+
+testFetches();
