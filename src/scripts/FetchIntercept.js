@@ -23,8 +23,11 @@ class FetchIntercept {
       if (this.interceptor) {
         const interceptorResult = await this.interceptor(...args);
 
+        // Clone the response to allow multiple reads
+        const clonedResponse = interceptorResult.clone();
+
         if (interceptorResult instanceof Response) {
-          const locationHeader = interceptorResult.headers.get("Location");
+          const locationHeader = clonedResponse.headers.get("Location");
           if (locationHeader) {
             window.location.href = locationHeader;
             return interceptorResult;
@@ -32,11 +35,10 @@ class FetchIntercept {
           }
 
           // Handle content type for mocked responses
-          const contentType =
-            interceptorResult.headers.get("Content-Type") || "";
+          const contentType = clonedResponse.headers.get("Content-Type") || "";
 
           if (contentType.includes("text/plain")) {
-            const messageText = await interceptorResult.text();
+            const messageText = await clonedResponse.text();
             console.log("Plain Text Message:", messageText);
             alert(messageText);
           } else if (contentType) {
