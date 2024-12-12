@@ -1,80 +1,54 @@
-class CustomFetch {
-  constructor() {
-    this.swReady = false;
-    this.setupServiceWorker();
+import FetchIntercept from "./FetchIntercept.js";
+
+const fetchIntercept = new FetchIntercept();
+
+fetchIntercept.setup(async (url, options) => {
+  console.log("Intercepted global fetch:", { url, options });
+
+  // Example: Add a global header to every request
+  options = options || {};
+  options.headers = {
+    ...options.headers,
+    "X-Global-Intercept": "Active",
+  };
+
+  // Example: Modify or mock specific URLs
+  if (url.includes("jsonplaceholder")) {
+    console.log("JSONPlaceholder request detected");
+    // You could add special handling here
   }
 
-  async setupServiceWorker() {
-    if ("serviceWorker" in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.register(
-          "/scripts/service-worker.js",
-          {
-            scope: "/",
-          }
-        );
+  // Return modified request
+  return [url, options];
 
-        // Wait for the service worker to be active
-        if (registration.installing) {
-          await new Promise((resolve) => {
-            registration.installing.addEventListener("statechange", (e) => {
-              if (e.target.state === "activated") {
-                this.swReady = true;
-                resolve();
-              }
-            });
-          });
-        } else if (registration.waiting) {
-          await registration.waiting.activate();
-          this.swReady = true;
-        } else if (registration.active) {
-          this.swReady = true;
-        }
-
-        console.log("ServiceWorker registered and active");
-      } catch (error) {
-        console.error("ServiceWorker registration failed:", error);
-      }
+  /*return new Response(
+    JSON.stringify([
+      { id: 1, name: "Intercepted User", username: "interceptor" },
+    ]),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
     }
-  }
+  );*/
+});
 
-  async fetch(url, options = {}) {
-    // Wait for service worker to be ready
-    if (!this.swReady) {
-      await new Promise((resolve) => {
-        const checkReady = () => {
-          if (this.swReady) {
-            resolve();
-          } else {
-            setTimeout(checkReady, 100);
-          }
-        };
-        checkReady();
-      });
-    }
+async function testFetches() {
+  try {
+    const users = await fetch("https://jsonplaceholder.typicode.com/users");
+    const posts = await fetch("https://jsonplaceholder.typicode.com/posts");
+    const todos = await fetch("https://jsonplaceholder.typicode.com/todos");
 
-    const requestOptions = {
-      method: options.method || "GET",
-      headers: {
-        ...options.headers,
-        "Cache-Control": "max-age=86400",
-      },
-      body: options.body || null,
-      mode: options.mode || "cors",
-      credentials: options.credentials || "same-origin",
-      cache: options.cache || "default",
-      redirect: options.redirect || "follow",
-      referrerPolicy: options.referrerPolicy || "no-referrer-when-downgrade",
-    };
-
-    try {
-      const request = new Request(url, requestOptions);
-      const response = await fetch(request);
-      return response;
-    } catch (error) {
-      throw new Error(`Failed to fetch: ${error.message}`);
-    }
+    console.log("Fetch responses:", {
+      users: await users.json(),
+      posts: await posts.json(),
+      todos: await todos.json(),
+    });
+  } catch (error) {
+    console.error("Fetch error:", error);
   }
 }
 
-export default new CustomFetch();
+testFetches();
+
+// Optional: Restore original fetch
+// fetchIntercept.restore();
